@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+websockets
+pydantic
+langgraph
+langchain
+langchain-core
+python-dotenv
