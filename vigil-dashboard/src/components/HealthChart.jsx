@@ -13,11 +13,22 @@ export default function HealthChart() {
     : '#ef4444';
 
   return (
-    <div className="bg-[#111827] border border-[#1f2937] rounded-lg p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xs font-semibold text-gray-400 tracking-widest">NETWORK SIGNAL HEALTH SCORE</h2>
+    <div style={{
+      backgroundColor: '#111827',
+      border: '1px solid #1f2937',
+      borderRadius: '8px',
+      padding: '16px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h2 style={{
+          fontSize: '10px', fontWeight: '600',
+          color: '#9ca3af', letterSpacing: '0.1em',
+          margin: 0,
+        }}>NETWORK SIGNAL HEALTH SCORE</h2>
         {latestScore !== null && (
-          <span className="text-sm font-bold" style={{ color: scoreColor }}>● {latestScore}%</span>
+          <span style={{ fontSize: '14px', fontWeight: '700', color: scoreColor }}>
+            ● {latestScore}%
+          </span>
         )}
       </div>
 

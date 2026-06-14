@@ -64,7 +64,7 @@ export default function AlertFeed({ onAlertClick }) {
                 {(alert.severity || 'NORMAL').toUpperCase()}
               </span>
               <span style={{fontSize: '10px', color: '#6b7280'}}>
-                {alert.time || new Date().toLocaleTimeString()}
+                {alert.timestamp || alert.time || new Date().toLocaleTimeString()}
               </span>
             </div>
             <div style={{fontSize: '11px', color: '#c9d1d9', fontWeight: '400'}}>

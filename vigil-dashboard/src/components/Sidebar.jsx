@@ -15,7 +15,7 @@ export default function Sidebar() {
         gap: '6px', paddingBottom: '18px',
         borderBottom: '1px solid #1f2937', marginBottom: '20px'
       }}>
-        <img src="/src/assets/vigil-icon.png" alt="VIGIL"
+        <img src="/vigil-icon.png" alt="VIGIL"
           style={{height: '46px', width: 'auto'}} />
         <div style={{
           fontSize: '10px', fontWeight: '700',

@@ -33,6 +33,17 @@ const CONNECTIONS = [
 const getSeverityColor = (s) =>
   s === 'Critical' ? '#ef4444' : s === 'Warning' ? '#f59e0b' : '#00ff88'
 
+// Escape characters that have special meaning in HTML.
+// Used before injecting backend-supplied strings into Leaflet template-literal HTML.
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const DARK_TILES = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 
 function makeIcon(L, color, pulse = false) {
@@ -67,16 +78,16 @@ function makeTooltip(section, city, severity, trainId, color) {
   return `
     <div style="
       background:#0d1321;border:1px solid #1f2937;
-      border-left:2px solid ${color};
+      border-left:2px solid ${escHtml(color)};
       border-radius:6px;padding:8px 12px;
       color:#fff;font-size:11px;
       font-family:Inter,sans-serif;min-width:130px;
     ">
-      <div style="font-weight:700;color:${color};margin-bottom:2px;">${section}</div>
-      <div style="color:#c9d1d9;font-size:12px;font-weight:600;">${city}</div>
-      <div style="color:#6b7280;font-size:10px;margin-top:2px;">${trainId || '—'}</div>
-      <div style="color:${color};font-weight:600;font-size:10px;margin-top:3px;">
-        ${severity.toUpperCase()}
+      <div style="font-weight:700;color:${escHtml(color)};margin-bottom:2px;">${escHtml(section)}</div>
+      <div style="color:#c9d1d9;font-size:12px;font-weight:600;">${escHtml(city)}</div>
+      <div style="color:#6b7280;font-size:10px;margin-top:2px;">${escHtml(trainId || '—')}</div>
+      <div style="color:${escHtml(color)};font-weight:600;font-size:10px;margin-top:3px;">
+        ${escHtml(severity.toUpperCase())}
       </div>
     </div>
   `

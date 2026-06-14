@@ -8,24 +8,29 @@ const idleMessages = [
   { agent: 'WatchAgent', msg: 'Temperature within safe range across all monitored sections' },
 ];
 
+// IMPORTANT: use inline color values, not Tailwind class strings.
+// Tailwind v4 purges any class string that is never statically present in a file,
+// so dynamic values like `text-blue-400` built at runtime are stripped from the bundle.
 const agentColors = {
-  WatchAgent: 'text-blue-400',
-  AlertAgent: 'text-yellow-400',
-  ActionAgent: 'text-[#00ff88]',
+  WatchAgent:  '#60a5fa', // blue-400
+  AlertAgent:  '#facc15', // yellow-400
+  ActionAgent: '#00ff88', // vigil green
 };
 
 export default function AgentLog() {
-  const { latest } = useVigilStream();
+  const { latest, connected } = useVigilStream();
   const [log, setLog] = useState([]);
 
-  // Idle rotation so the log keeps breathing between live events
+  // Idle rotation so the log keeps breathing between live events.
+  // Only run when actually connected — don't show fake messages during outages.
   useEffect(() => {
+    if (!connected) return;
     const interval = setInterval(() => {
       const msg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
       setLog(prev => [{ ...msg, id: `idle-${Date.now()}` }, ...prev].slice(0, 40));
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [connected]);
 
   // Real entries driven by the live /stream — this is what makes the
   // log feel like an actual reasoning trace instead of a script
@@ -56,13 +61,29 @@ export default function AgentLog() {
   }, [latest]);
 
   return (
-    <div className="bg-[#111827] border border-[#1f2937] rounded-lg p-4 h-full overflow-y-auto">
-      <h2 className="text-xs font-semibold text-gray-400 tracking-widest mb-3">AGENT ACTIVITY LOG</h2>
-      <div className="space-y-1.5">
+    <div style={{
+      backgroundColor: '#111827',
+      border: '1px solid #1f2937',
+      borderRadius: '8px',
+      padding: '16px',
+      height: '100%',
+      overflowY: 'auto',
+    }}>
+      <h2 style={{
+        fontSize: '10px', fontWeight: '600',
+        color: '#9ca3af', letterSpacing: '0.1em',
+        marginBottom: '12px',
+      }}>AGENT ACTIVITY LOG</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {log.map(entry => (
-          <div key={entry.id} className="text-sm leading-relaxed">
-            <span className={`font-semibold ${agentColors[entry.agent]}`}>{entry.agent}</span>
-            <span className="text-gray-300">  {entry.msg}</span>
+          <div key={entry.id} style={{ fontSize: '13px', lineHeight: '1.5' }}>
+            <span style={{
+              fontWeight: '600',
+              color: agentColors[entry.agent] || '#9ca3af',
+            }}>
+              {entry.agent}
+            </span>
+            <span style={{ color: '#d1d5db' }}>{'  '}{entry.msg}</span>
           </div>
         ))}
       </div>

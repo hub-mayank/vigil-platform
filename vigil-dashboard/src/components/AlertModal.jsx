@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 
-const AGENT_ANALYZE_URL = 'http://localhost:8000/agent/analyze';
+// Use env var so this works on Vercel too.
+// Set VITE_AGENT_API_URL in your .env.local or in Vercel project settings.
+const AGENT_ANALYZE_URL =
+  (import.meta.env.VITE_AGENT_API_URL || 'http://localhost:8000') + '/agent/analyze';
+
 const AGENT_ANALYZE_TIMEOUT_MS = 4000; // if Groq is slow, fall back rather than hang the modal
 
 export default function AlertModal({ alert, onClose, onResolve }) {
@@ -54,9 +58,6 @@ export default function AlertModal({ alert, onClose, onResolve }) {
   }, [alert?.id]);
 
   // --- NULL GUARD ---
-  // Without this, the modal crashes the whole app with
-  // "Cannot read properties of null (reading 'train_id')" the moment
-  // `alert` is null — which is most of the time (before any alert is clicked).
   if (!alert) return null;
 
   const trainId = alert.train_id || alert.trainId;
@@ -204,7 +205,8 @@ export default function AlertModal({ alert, onClose, onResolve }) {
               <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
                 {trace.map((step, i) => (
                   <div key={i} style={{fontSize: '10px', color: '#9ca3af'}}>
-                    <span style={{color: '#00ff88'}}>→</span> {step}
+                    {/* Render as text, not innerHTML — XSS safe */}
+                    <span style={{color: '#00ff88'}}>→</span> {String(step)}
                   </div>
                 ))}
               </div>
