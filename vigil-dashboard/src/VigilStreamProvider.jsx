@@ -17,7 +17,7 @@ const SECTIONS = ['SECTION_A','SECTION_B','SECTION_C','SECTION_D','SECTION_E','S
  *   is_anomaly, anomaly_score, severity, recommended_action
  * }
  */
-export function VigilStreamProvider({ children, url = 'http://localhost:8000/stream' }) {
+export function VigilStreamProvider({ children, url="https://swagger-upload-climate.ngrok-free.dev/stream?ngrok-skip-browser-warning=true" }) {
   const [latest, setLatest] = useState(null);
   const [history, setHistory] = useState([]);     // for HealthChart
   const [alerts, setAlerts] = useState([]);       // for AlertFeed
