@@ -1,3 +1,18 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
+
+# Never commit secrets or trained model binary to version control
+.env
+.env.local
+*.env
+
+# The pkl is 1.8 MB and regeneratable from sensors.csv + model.py
+vigil_model.pkl
+
+# Generated data — large and reproducible via data_generator.py
+sensors.csv
+
+# macOS
+.DS_Store

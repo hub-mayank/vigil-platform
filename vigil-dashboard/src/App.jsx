@@ -26,7 +26,7 @@ export default function App() {
   }
 
   return (
-    <VigilStreamProvider url={import.meta.env.VITE_STREAM_URL || "https://swagger-upload-climate.ngrok-free.dev/stream?ngrok-skip-browser-warning=true"}>
+    <VigilStreamProvider>
       <div style={{
         display: 'flex', height: '100vh', width: '100vw',
         overflow: 'hidden', flexDirection: 'column',
