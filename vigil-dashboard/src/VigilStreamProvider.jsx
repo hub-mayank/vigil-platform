@@ -60,6 +60,7 @@ export function VigilStreamProvider({ children, url = 'http://localhost:8000/str
           anomaly_score: data.anomaly_score ?? 0,
           recommended_action: data.recommended_action ?? '',
           timestamp,
+          raw: data, // full reading — needed for /agent/analyze (signal_voltage, vibration_hz, speed_kmh, temperature_celsius)
         };
         const next = [entry, ...prev];
         return next.length > 20 ? next.slice(0, 20) : next;

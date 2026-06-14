@@ -89,8 +89,10 @@ function useLeafletMap(containerRef, sections, interactive) {
   // Init map
   useEffect(() => {
     if (!containerRef.current || instanceRef.current) return
+    let cancelled = false
 
     import('leaflet').then(L => {
+      if (cancelled || !containerRef.current || instanceRef.current) return
       const map = L.map(containerRef.current, {
         center: [22.5, 80.5],
         zoom: interactive ? 5 : 4.5,
@@ -136,6 +138,7 @@ function useLeafletMap(containerRef, sections, interactive) {
     })
 
     return () => {
+      cancelled = true
       if (instanceRef.current) {
         instanceRef.current.map.remove()
         instanceRef.current = null
