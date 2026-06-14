@@ -1,146 +1,132 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef } from "react"
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts';
-import { Activity } from 'lucide-react';
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, ReferenceLine
+} from "recharts"
 
-function generatePoint(ts) {
-  return {
-    time: new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    score: Math.floor(60 + Math.random() * 38 + Math.sin(ts / 3000) * 5),
-  };
+function getLineColor(score) {
+  if (score >= 80) return '#00ff88'
+  if (score >= 60) return '#f59e0b'
+  return '#ef4444'
 }
 
-const INITIAL_COUNT = 30;
-
-function initialData() {
-  const now = Date.now();
-  return Array.from({ length: INITIAL_COUNT }, (_, i) =>
-    generatePoint(now - (INITIAL_COUNT - i) * 2000)
-  );
+function CustomLine({ points, data }) {
+  if (!points || points.length < 2) return null
+  const segments = []
+  for (let i = 0; i < points.length - 1; i++) {
+    const score = data[i]?.score ?? 75
+    segments.push(
+      <line
+        key={i}
+        x1={points[i].x} y1={points[i].y}
+        x2={points[i+1].x} y2={points[i+1].y}
+        stroke={getLineColor(score)}
+        strokeWidth={2.5}
+        strokeLinecap="round"
+      />
+    )
+  }
+  return <g>{segments}</g>
 }
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  const val = payload[0].value;
-  const color = val >= 80 ? '#00ff88' : val >= 60 ? '#facc15' : '#ef4444';
-  return (
-    <div className="bg-[#0d1424] border border-gray-700 rounded-lg px-3 py-2 text-xs shadow-xl">
-      <p className="text-gray-400 mb-1">{label}</p>
-      <p className="font-bold" style={{ color }}>Health: {val}</p>
-    </div>
-  );
-};
 
 export default function HealthChart() {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState(
+    Array.from({length: 20}, (_, i) => ({
+      t: i, score: Math.floor(Math.random() * 15 + 72)
+    }))
+  )
+  const latestScore = data[data.length - 1]?.score ?? 75
 
   useEffect(() => {
     const interval = setInterval(() => {
       setData(prev => {
-        const next = [...prev, generatePoint(Date.now())];
-        return next.slice(-60);
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+        const last = prev[prev.length - 1]
+        const newScore = Math.max(40, Math.min(98,
+          last.score + (Math.random() * 12 - 6)
+        ))
+        return [...prev.slice(-29), {t: last.t + 1, score: Math.round(newScore)}]
+      })
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
 
-  const latest = data[data.length - 1]?.score ?? 0;
-  const healthColor = latest >= 80 ? '#00ff88' : latest >= 60 ? '#facc15' : '#ef4444';
-  const healthLabel = latest >= 80 ? 'HEALTHY' : latest >= 60 ? 'DEGRADED' : 'CRITICAL';
+  const lineColor = getLineColor(latestScore)
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Activity className="w-4 h-4 text-[#00ff88]" />
-          <h2 className="text-sm font-semibold text-white tracking-wide">Signal Health</h2>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">Last 60 samples · 2s interval</span>
-          <div
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold"
-            style={{ backgroundColor: `${healthColor}18`, color: healthColor }}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ backgroundColor: healthColor }}
-            />
-            {healthLabel}
-          </div>
-          <span
-            className="text-2xl font-bold tabular-nums"
-            style={{ color: healthColor }}
-          >
-            {latest}
-          </span>
+    <div style={{
+      borderRadius: '10px', border: '1px solid #1a2535',
+      padding: '14px 18px', backgroundColor: '#0b1120', flexShrink: 0
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', marginBottom: '12px'
+      }}>
+        <div style={{
+          fontSize: '10px', fontWeight: '600',
+          letterSpacing: '0.1em', color: '#8896a8'
+        }}>NETWORK SIGNAL HEALTH SCORE</div>
+        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+          <div style={{
+            width: '7px', height: '7px', borderRadius: '50%',
+            backgroundColor: lineColor,
+            boxShadow: `0 0 6px ${lineColor}`,
+            transition: 'background-color 1s, box-shadow 1s'
+          }}/>
+          <span style={{fontSize: '11px', fontWeight: '700', color: lineColor,
+            transition: 'color 1s'
+          }}>{latestScore}%</span>
         </div>
       </div>
 
-      {/* Chart */}
-      <div style={{ height: '200px', width: '100%' }}>
-        <ResponsiveContainer width="100%" height={200} minHeight={200}>
-          <LineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="healthGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#00ff88" stopOpacity={0.6} />
-                <stop offset="100%" stopColor="#00ccff" stopOpacity={0.9} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-            <XAxis
-              dataKey="time"
-              tick={{ fill: '#4b5563', fontSize: 9 }}
-              tickLine={false}
-              axisLine={false}
-              interval={9}
-            />
-            <YAxis
-              domain={[0, 100]}
-              tick={{ fill: '#4b5563', fontSize: 9 }}
-              tickLine={false}
-              axisLine={false}
-              ticks={[0, 25, 50, 75, 100]}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine y={80} stroke="#00ff88" strokeDasharray="4 4" strokeOpacity={0.3} />
-            <ReferenceLine y={60} stroke="#facc15" strokeDasharray="4 4" strokeOpacity={0.3} />
-            <Line
-              type="monotone"
-              dataKey="score"
-              stroke="url(#healthGradient)"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, fill: '#00ff88', strokeWidth: 0 }}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <ResponsiveContainer width="100%" height={190}>
+        <LineChart data={data} margin={{top: 6, right: 10, bottom: 4, left: 0}}>
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1a2535" strokeWidth="0.5"/>
+            </pattern>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1a2535" />
+          <XAxis dataKey="t" hide />
+          <YAxis
+            domain={[0, 100]} stroke="#2d3748"
+            tick={{fill: '#6b7280', fontSize: 10}} width={30}
+            ticks={[0, 25, 50, 60, 75, 80, 100]}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: '#0d1321', border: '1px solid #1f2937',
+              borderRadius: 6, fontSize: 11
+            }}
+            labelStyle={{color: '#9ca3af'}}
+            itemStyle={{color: lineColor}}
+            formatter={(val) => [`${val}%`, 'Health']}
+          />
 
-      {/* Legend */}
-      <div className="flex gap-4 mt-2 text-[10px] text-gray-500">
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-[#00ff88] opacity-40 border-dashed border-t border-[#00ff88]" />
-          ≥80 Healthy
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-yellow-400 opacity-40" />
-          ≥60 Degraded
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-red-400 opacity-40" />
-          &lt;60 Critical
-        </span>
-      </div>
+          {/* Green reference line — good zone */}
+          <ReferenceLine
+            y={80} stroke="#00ff8840"
+            strokeDasharray="6 4" strokeWidth={1.5}
+            label={{value: 'Good', position: 'insideTopRight', fill: '#00ff8880', fontSize: 9}}
+          />
+
+          {/* Red reference line — critical zone */}
+          <ReferenceLine
+            y={60} stroke="#ef444440"
+            strokeDasharray="6 4" strokeWidth={1.5}
+            label={{value: 'Weak', position: 'insideBottomRight', fill: '#ef444480', fontSize: 9}}
+          />
+
+          <Line
+            type="monotone"
+            dataKey="score"
+            stroke={lineColor}
+            strokeWidth={2.5}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
-  );
+  )
 }

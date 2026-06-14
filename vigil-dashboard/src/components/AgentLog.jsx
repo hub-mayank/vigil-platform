@@ -1,147 +1,93 @@
-import { useEffect, useRef, useState } from 'react';
-import { Bot, Eye, Bell, Zap } from 'lucide-react';
+import { useState, useEffect } from "react"
 
-const AGENTS = [
-  {
-    id: 'WatchAgent',
-    icon: Eye,
-    color: 'text-sky-400',
-    dotColor: 'bg-sky-400',
-    badgeBg: 'bg-sky-500/15',
-    actions: [
-      'Scanning track T-01A for signal anomalies...',
-      'Monitoring Train TRN-2201 telemetry stream',
-      'Cross-referencing signal latency on T-04D',
-      'Running occupancy detection on segments 5–8',
-      'Verifying sensor uptime across all towers',
-      'Polling GPS beacon of TRN-7765',
-      'Detecting speed variance on corridor C3',
-      'Initiating deep scan of T-02B signal relay',
-    ],
-  },
-  {
-    id: 'AlertAgent',
-    icon: Bell,
-    color: 'text-amber-400',
-    dotColor: 'bg-amber-400',
-    badgeBg: 'bg-amber-500/15',
-    actions: [
-      'Classified signal drop on T-03C as Warning',
-      'Critical threshold breached — escalating TRN-4452',
-      'Alert suppression window applied to T-07G',
-      'Routing alert bundle to dispatcher console',
-      'Acknowledged Normal status for TRN-1123',
-      'Correlating 3 Warning events — pattern detected',
-      'Dispatching SMS advisory to Zone 4 controller',
-      'Deduplication: merged 2 duplicate alerts on T-05E',
-    ],
-  },
-  {
-    id: 'ActionAgent',
-    icon: Zap,
-    color: 'text-[#00ff88]',
-    dotColor: 'bg-[#00ff88]',
-    badgeBg: 'bg-[#00ff88]/10',
-    actions: [
-      'Recommending emergency stop for TRN-8871',
-      'Issued speed restriction order — Zone 2 active',
-      'Sent maintenance dispatch to depot T-06F',
-      'Override request logged — awaiting supervisor',
-      'Auto-resolved signal bounce on T-01A',
-      'Activated amber warning on approach T-03C',
-      'Queued inspection for TRN-3390 at next station',
-      'Action playbook "SIGNAL_FAIL_01" triggered',
-    ],
-  },
-];
+const messages = [
+  { agent: 'WatchAgent', msg: 'Monitoring 50 active train sensors across 10 sections' },
+  { agent: 'WatchAgent', msg: 'Signal voltage nominal on SECTION_A through SECTION_D' },
+  { agent: 'WatchAgent', msg: 'Vibration levels within threshold on all active trains' },
+  { agent: 'WatchAgent', msg: 'Speed nominal on TRAIN_007 — continuing surveillance' },
+  { agent: 'WatchAgent', msg: 'Temperature within safe range across all monitored sections' },
+  { agent: 'WatchAgent', msg: 'Cross-referencing signal latency on SECTION_B and SECTION_C' },
+  { agent: 'AlertAgent', msg: 'Anomaly detected — TRAIN_023 voltage spike on SECTION_F' },
+  { agent: 'AlertAgent', msg: 'Classifying severity — threshold breach confirmed: CRITICAL' },
+  { agent: 'AlertAgent', msg: 'Warning: Temperature rising on TRAIN_041 engine sensor' },
+  { agent: 'AlertAgent', msg: 'Deduplication: merged 2 duplicate alerts on SECTION_E' },
+  { agent: 'AlertAgent', msg: 'Signal bounce detected on TRAIN_019 — flagging for review' },
+  { agent: 'ActionAgent', msg: 'Recommendation: Reduce speed on SECTION_F immediately' },
+  { agent: 'ActionAgent', msg: 'Dispatching maintenance alert to Section F control team' },
+  { agent: 'ActionAgent', msg: 'Predictive flag logged for TRAIN_041 — schedule inspection' },
+  { agent: 'ActionAgent', msg: 'Speed restriction order issued — Zone 2 active' },
+  { agent: 'ActionAgent', msg: 'SMS advisory dispatched to Zone 4 controller' },
+  { agent: 'ActionAgent', msg: 'Auto-resolved signal bounce on TRAIN_019 — resuming watch' },
+]
 
-let globalCounter = 0;
-
-function newEntry() {
-  const agent = AGENTS[Math.floor(Math.random() * AGENTS.length)];
-  return {
-    id: ++globalCounter,
-    agentId: agent.id,
-    icon: agent.icon,
-    color: agent.color,
-    dotColor: agent.dotColor,
-    badgeBg: agent.badgeBg,
-    message: agent.actions[Math.floor(Math.random() * agent.actions.length)],
-    timestamp: new Date(),
-  };
-}
-
-function initialEntries() {
-  return Array.from({ length: 10 }, newEntry).reverse();
-}
+const agentColor = (a) =>
+  a === 'WatchAgent' ? '#378ADD' : a === 'AlertAgent' ? '#f59e0b' : '#00ff88'
 
 export default function AgentLog() {
-  const [entries, setEntries] = useState(initialEntries);
-  const listRef = useRef(null);
+  const [logs, setLogs] = useState(
+    messages.slice(0, 10).map((m, i) => ({...m, id: i}))
+  )
 
   useEffect(() => {
+    let i = 10
     const interval = setInterval(() => {
-      setEntries(prev => [newEntry(), ...prev].slice(0, 60));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+      const msg = messages[i % messages.length]
+      setLogs(prev => [...prev.slice(-30), {...msg, id: Date.now()}])
+      i++
+    }, 2500)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Bot className="w-4 h-4 text-[#00ff88]" />
-          <h2 className="text-sm font-semibold text-white tracking-wide">Agent Activity</h2>
-          <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
-            <span className="text-[10px] text-[#00ff88] font-medium">3 agents</span>
-          </span>
-        </div>
-        <div className="flex gap-2 text-[10px] text-gray-500">
-          {AGENTS.map(a => (
-            <span key={a.id} className={`${a.color} font-medium`}>{a.id}</span>
-          ))}
-        </div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      flex: 1,
+      borderRadius: '10px',
+      border: '1px solid #1f2937',
+      padding: '14px 18px',
+      backgroundColor: '#111827',
+      overflow: 'hidden',
+      minHeight: 0
+    }}>
+      <div style={{
+        fontSize: '10px',
+        fontWeight: '600',
+        letterSpacing: '0.1em',
+        color: '#9ca3af',
+        marginBottom: '10px',
+        flexShrink: 0
+      }}>
+        AGENT ACTIVITY LOG
       </div>
-
-      {/* Log list */}
-      <div
-        ref={listRef}
-        className="flex-1 overflow-y-auto space-y-1.5 pr-1"
-        style={{ maxHeight: '280px' }}
-      >
-        {entries.map((entry, idx) => {
-          const Icon = entry.icon;
-          return (
-            <div
-              key={entry.id}
-              className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border border-gray-800/80
-                ${entry.badgeBg} transition-all duration-300
-                ${idx === 0 ? 'animate-[fadeSlideIn_0.3s_ease]' : ''}
-              `}
-            >
-              {/* Agent icon */}
-              <div className={`mt-0.5 shrink-0 ${entry.color}`}>
-                <Icon className="w-3.5 h-3.5" />
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <span className={`text-[10px] font-bold ${entry.color} mr-2`}>
-                  {entry.agentId}
-                </span>
-                <span className="text-xs text-gray-300">{entry.message}</span>
-              </div>
-
-              {/* Time */}
-              <span className="text-[10px] text-gray-600 font-mono shrink-0 mt-0.5">
-                {entry.timestamp.toLocaleTimeString()}
-              </span>
-            </div>
-          );
-        })}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '7px',
+        overflowY: 'auto',
+        flex: 1
+      }}>
+        {[...logs].reverse().map((log, i) => (
+          <div key={log.id ?? i} style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+            fontSize: '11px',
+            lineHeight: '1.45'
+          }}>
+            <span style={{
+              fontWeight: '700',
+              flexShrink: 0,
+              width: '88px',
+              color: agentColor(log.agent),
+              fontSize: '11px'
+            }}>
+              {log.agent}
+            </span>
+            <span style={{color: '#c9d1d9'}}>{log.msg}</span>
+          </div>
+        ))}
       </div>
     </div>
-  );
+  )
 }
