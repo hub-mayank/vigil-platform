@@ -30,12 +30,12 @@ export default function AlertFeed({ onAlertClick }) {
           LIVE ALERT FEED
         </div>
         <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
-          <div style={{
+          <div className={connected ? 'live-badge' : ''} style={{
             width: '6px', height: '6px', borderRadius: '50%',
             backgroundColor: connected ? '#00ff88' : '#ef4444',
             boxShadow: connected ? '0 0 5px #00ff88' : '0 0 5px #ef4444'
           }}/>
-          <span style={{fontSize: '9px', fontWeight: '600', letterSpacing: '0.06em',
+          <span className={connected ? 'live-badge' : ''} style={{fontSize: '9px', fontWeight: '600', letterSpacing: '0.06em',
             color: connected ? '#00ff88' : '#ef4444'
           }}>{connected ? 'LIVE' : 'OFFLINE'}</span>
         </div>
@@ -46,6 +46,7 @@ export default function AlertFeed({ onAlertClick }) {
           <div
             key={alert.id || i}
             onClick={() => alert.severity === 'Critical' && onAlertClick && onAlertClick(alert)}
+            className={`alert-card-enter ${alert.severity === 'Critical' ? 'alert-critical' : ''}`}
             style={{
               display: 'flex', flexDirection: 'column', gap: '2px',
               padding: '7px 10px', borderRadius: '6px',

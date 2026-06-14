@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 * {
   box-sizing: border-box;
   margin: 0;
@@ -23,7 +22,7 @@ code, .font-mono {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* Scrollbar styling */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -39,16 +38,10 @@ code, .font-mono {
   background: #374151;
 }
 
-/* Custom animations */
+/* ── Core animations ── */
 @keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeIn {
@@ -57,12 +50,136 @@ code, .font-mono {
 }
 
 @keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Alert card entrance ── */
+@keyframes alertSlideIn {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.98);
+    transform: translateX(18px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(0);
   }
+}
+
+.alert-card-enter {
+  animation: alertSlideIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Critical pulse glow ── */
+@keyframes criticalGlow {
+  0%, 100% { box-shadow: 0 0 0px #ef444400; }
+  50%       { box-shadow: 0 0 10px #ef444455; }
+}
+
+.alert-critical {
+  animation: criticalGlow 2s ease-in-out infinite;
+}
+
+/* ── Agent log entry entrance ── */
+@keyframes logFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.log-entry-enter {
+  animation: logFadeIn 0.2s ease-out both;
+}
+
+/* ── Health chart color transition ── */
+.chart-line {
+  transition: stroke 0.6s ease;
+}
+
+/* ── Sidebar module card hover ── */
+.module-card {
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.module-card:hover {
+  background: #1a2535 !important;
+}
+
+/* ── Train tracker card hover ── */
+.train-card {
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.train-card:hover {
+  transform: translateY(-1px);
+  background: #1a2535 !important;
+}
+
+/* ── Button polish ── */
+button {
+  transition: opacity 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+button:hover {
+  opacity: 0.92;
+}
+button:active {
+  transform: scale(0.97);
+}
+
+/* ── Mark resolved button glow ── */
+.resolve-btn:hover {
+  box-shadow: 0 0 16px #00ff8855;
+}
+
+/* ── Modal entrance ── */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-enter {
+  animation: modalIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Status dot breathing (ALL SYSTEMS ACTIVE) ── */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 4px #00ff88; opacity: 1; }
+  50%       { box-shadow: 0 0 12px #00ff88; opacity: 0.75; }
+}
+
+.status-dot {
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+/* ── Live badge pulse ── */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.live-badge {
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
+/* ── Section panel border glow on critical ── */
+@keyframes panelCritical {
+  0%, 100% { border-color: #ef444430; }
+  50%       { border-color: #ef444475; }
+}
+
+.panel-critical {
+  animation: panelCritical 1.8s ease-in-out infinite;
+}
+
+/* ── Smooth color transitions everywhere ── */
+div, span, p {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Override transition for layout/position properties to avoid jank */
+div {
+  transition-property: color, background-color, border-color, box-shadow, opacity;
 }
