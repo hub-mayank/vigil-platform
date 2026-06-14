@@ -12,7 +12,8 @@ export default function App() {
   const [activeAlert, setActiveAlert] = useState(null)
   const [resolvedIds, setResolvedIds] = useState(new Set())
   const [time, setTime] = useState(new Date())
-  const [mapOpen, setMapOpen] = useState(false)
+
+  // mapOpen state removed — RailNetworkMap owns its own expand/collapse internally
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)
@@ -33,12 +34,12 @@ export default function App() {
         fontFamily: 'Inter, system-ui, sans-serif'
       }}>
 
-        <div style={{display: 'flex', flex: 1, overflow: 'hidden'}}>
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           <Sidebar />
 
-          <div style={{display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden'}}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
-            {/* Header — logo image removed, text only */}
+            {/* Header */}
             <div style={{
               display: 'flex', alignItems: 'center',
               justifyContent: 'space-between',
@@ -47,7 +48,7 @@ export default function App() {
               backgroundColor: '#0b1120',
               minHeight: '62px', flexShrink: 0
             }}>
-              <div style={{display: 'flex', flexDirection: 'column', gap: '3px'}}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <div style={{
                   fontSize: '21px', fontWeight: '700',
                   letterSpacing: '0.22em', color: '#dedad4', lineHeight: 1
@@ -58,12 +59,12 @@ export default function App() {
                 }}>INTELLIGENCE THAT PROTECTS</div>
               </div>
 
-              <div style={{display: 'flex', alignItems: 'center', gap: '22px'}}>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                  <div style={{
+              <div style={{ display: 'flex', alignItems: 'center', gap: '22px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="status-dot" style={{
                     width: '7px', height: '7px', borderRadius: '50%',
                     backgroundColor: '#00ff88', boxShadow: '0 0 7px #00ff88'
-                  }}/>
+                  }} />
                   <span style={{
                     fontSize: '11px', fontWeight: '600',
                     color: '#00ff88', letterSpacing: '0.08em'
@@ -93,36 +94,20 @@ export default function App() {
                   display: 'flex', gap: '14px',
                   flex: 1, overflow: 'hidden', minHeight: 0
                 }}>
-                  {/* Agent Log — 40% width */}
-                  <div style={{flex: '0 0 38%', overflow: 'hidden'}}>
+                  {/* Agent Log — 38% width */}
+                  <div style={{ flex: '0 0 38%', overflow: 'hidden' }}>
                     <AgentLog />
                   </div>
 
-                  {/* Map — 60% width, clickable */}
-                  <div
-                    style={{flex: 1, overflow: 'hidden', position: 'relative', cursor: 'pointer'}}
-                    onClick={() => setMapOpen(true)}
-                    onMouseEnter={e => e.currentTarget.querySelector('.map-hint').style.opacity = 1}
-                    onMouseLeave={e => e.currentTarget.querySelector('.map-hint').style.opacity = 0}
-                  >
+                  {/* Rail Network Map — 62% width */}
+                  <div style={{ flex: 1, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <RailNetworkMap />
-                    <div className="map-hint" style={{
-                      position: 'absolute', inset: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backgroundColor: 'rgba(10,15,30,0.6)',
-                      opacity: 0, transition: 'opacity 0.2s',
-                      borderRadius: '8px', fontSize: '13px',
-                      fontWeight: '600', color: '#00ff88',
-                      letterSpacing: '0.08em'
-                    }}>
-                      ⊕ CLICK TO EXPAND MAP
-                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Right column — Alert Feed */}
-              <div style={{width: '300px', flexShrink: 0, overflow: 'hidden'}}>
+              <div style={{ width: '300px', flexShrink: 0, overflow: 'hidden' }}>
                 <AlertFeed onAlertClick={setActiveAlert} />
               </div>
             </div>
@@ -141,41 +126,10 @@ export default function App() {
           />
         )}
 
-        {/* Map Fullscreen Modal */}
-        {mapOpen && (
-          <div
-            onClick={() => setMapOpen(false)}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 999,
-              backgroundColor: 'rgba(5,8,18,0.92)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '32px'
-            }}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              style={{
-                width: '85vw', maxWidth: '1000px',
-                backgroundColor: '#111827',
-                border: '1px solid #1f2937',
-                borderRadius: '12px', padding: '24px',
-                position: 'relative'
-              }}
-            >
-              <button
-                onClick={() => setMapOpen(false)}
-                style={{
-                  position: 'absolute', top: '16px', right: '16px',
-                  background: 'none', border: '1px solid #374151',
-                  color: '#9ca3af', borderRadius: '6px',
-                  padding: '4px 10px', cursor: 'pointer',
-                  fontSize: '12px', letterSpacing: '0.05em'
-                }}
-              >✕ CLOSE</button>
-              <RailNetworkMap />
-            </div>
-          </div>
-        )}
+        {/* NOTE: Map fullscreen modal removed from here.
+            RailNetworkMap.jsx now owns its own expand overlay (position: fixed).
+            This means it always renders correctly above everything, including
+            the TrainTracker bar at the bottom. */}
 
       </div>
     </VigilStreamProvider>
