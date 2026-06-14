@@ -1,93 +1,71 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from 'react';
+import { useVigilStream } from '../VigilStreamProvider';
 
-const messages = [
+const idleMessages = [
   { agent: 'WatchAgent', msg: 'Monitoring 50 active train sensors across 10 sections' },
-  { agent: 'WatchAgent', msg: 'Signal voltage nominal on SECTION_A through SECTION_D' },
+  { agent: 'WatchAgent', msg: 'Signal voltage nominal across all active sections' },
   { agent: 'WatchAgent', msg: 'Vibration levels within threshold on all active trains' },
-  { agent: 'WatchAgent', msg: 'Speed nominal on TRAIN_007 — continuing surveillance' },
   { agent: 'WatchAgent', msg: 'Temperature within safe range across all monitored sections' },
-  { agent: 'WatchAgent', msg: 'Cross-referencing signal latency on SECTION_B and SECTION_C' },
-  { agent: 'AlertAgent', msg: 'Anomaly detected — TRAIN_023 voltage spike on SECTION_F' },
-  { agent: 'AlertAgent', msg: 'Classifying severity — threshold breach confirmed: CRITICAL' },
-  { agent: 'AlertAgent', msg: 'Warning: Temperature rising on TRAIN_041 engine sensor' },
-  { agent: 'AlertAgent', msg: 'Deduplication: merged 2 duplicate alerts on SECTION_E' },
-  { agent: 'AlertAgent', msg: 'Signal bounce detected on TRAIN_019 — flagging for review' },
-  { agent: 'ActionAgent', msg: 'Recommendation: Reduce speed on SECTION_F immediately' },
-  { agent: 'ActionAgent', msg: 'Dispatching maintenance alert to Section F control team' },
-  { agent: 'ActionAgent', msg: 'Predictive flag logged for TRAIN_041 — schedule inspection' },
-  { agent: 'ActionAgent', msg: 'Speed restriction order issued — Zone 2 active' },
-  { agent: 'ActionAgent', msg: 'SMS advisory dispatched to Zone 4 controller' },
-  { agent: 'ActionAgent', msg: 'Auto-resolved signal bounce on TRAIN_019 — resuming watch' },
-]
+];
 
-const agentColor = (a) =>
-  a === 'WatchAgent' ? '#378ADD' : a === 'AlertAgent' ? '#f59e0b' : '#00ff88'
+const agentColors = {
+  WatchAgent: 'text-blue-400',
+  AlertAgent: 'text-yellow-400',
+  ActionAgent: 'text-[#00ff88]',
+};
 
 export default function AgentLog() {
-  const [logs, setLogs] = useState(
-    messages.slice(0, 10).map((m, i) => ({...m, id: i}))
-  )
+  const { latest } = useVigilStream();
+  const [log, setLog] = useState([]);
 
+  // Idle rotation so the log keeps breathing between live events
   useEffect(() => {
-    let i = 10
     const interval = setInterval(() => {
-      const msg = messages[i % messages.length]
-      setLogs(prev => [...prev.slice(-30), {...msg, id: Date.now()}])
-      i++
-    }, 2500)
-    return () => clearInterval(interval)
-  }, [])
+      const msg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
+      setLog(prev => [{ ...msg, id: `idle-${Date.now()}` }, ...prev].slice(0, 40));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Real entries driven by the live /stream — this is what makes the
+  // log feel like an actual reasoning trace instead of a script
+  useEffect(() => {
+    if (!latest) return;
+    const entries = [];
+
+    if (latest.is_anomaly) {
+      entries.push({
+        agent: 'AlertAgent',
+        msg: `Anomaly detected — ${latest.train_id} on ${latest.track_section}, severity ${latest.severity}`,
+      });
+      entries.push({
+        agent: 'ActionAgent',
+        msg: latest.recommended_action || `Recommendation logged for ${latest.train_id}`,
+      });
+    } else {
+      entries.push({
+        agent: 'WatchAgent',
+        msg: `${latest.train_id} on ${latest.track_section} — reading nominal, continuing surveillance`,
+      });
+    }
+
+    setLog(prev => [
+      ...entries.map((e, i) => ({ ...e, id: `live-${Date.now()}-${i}` })),
+      ...prev,
+    ].slice(0, 40));
+  }, [latest]);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      flex: 1,
-      borderRadius: '10px',
-      border: '1px solid #1f2937',
-      padding: '14px 18px',
-      backgroundColor: '#111827',
-      overflow: 'hidden',
-      minHeight: 0
-    }}>
-      <div style={{
-        fontSize: '10px',
-        fontWeight: '600',
-        letterSpacing: '0.1em',
-        color: '#9ca3af',
-        marginBottom: '10px',
-        flexShrink: 0
-      }}>
-        AGENT ACTIVITY LOG
-      </div>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '7px',
-        overflowY: 'auto',
-        flex: 1
-      }}>
-        {[...logs].reverse().map((log, i) => (
-          <div key={log.id ?? i} style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px',
-            fontSize: '11px',
-            lineHeight: '1.45'
-          }}>
-            <span style={{
-              fontWeight: '700',
-              flexShrink: 0,
-              width: '88px',
-              color: agentColor(log.agent),
-              fontSize: '11px'
-            }}>
-              {log.agent}
-            </span>
-            <span style={{color: '#c9d1d9'}}>{log.msg}</span>
+    <div className="bg-[#111827] border border-[#1f2937] rounded-lg p-4 h-full overflow-y-auto">
+      <h2 className="text-xs font-semibold text-gray-400 tracking-widest mb-3">AGENT ACTIVITY LOG</h2>
+      <div className="space-y-1.5">
+        {log.map(entry => (
+          <div key={entry.id} className="text-sm leading-relaxed">
+            <span className={`font-semibold ${agentColors[entry.agent]}`}>{entry.agent}</span>
+            <span className="text-gray-300">  {entry.msg}</span>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }

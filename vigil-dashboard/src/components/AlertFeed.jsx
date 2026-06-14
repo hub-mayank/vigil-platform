@@ -1,36 +1,20 @@
-import { useState, useEffect } from "react"
-
-const trains = ['TRAIN_001','TRAIN_007','TRAIN_013','TRAIN_019','TRAIN_023','TRAIN_031','TRAIN_042','TRAIN_050']
-const sections = ['SECTION_A','SECTION_B','SECTION_C','SECTION_D','SECTION_E','SECTION_F']
-const severities = ['Critical','Critical','Warning','Warning','Warning','Normal','Normal','Normal']
-
-function randomAlert() {
-  const severity = severities[Math.floor(Math.random() * severities.length)]
-  return {
-    id: Date.now() + Math.random(),
-    trainId: trains[Math.floor(Math.random() * trains.length)],
-    section: sections[Math.floor(Math.random() * sections.length)],
-    severity,
-    time: new Date().toLocaleTimeString(),
-    action: severity === 'Critical'
-      ? 'Reduce speed immediately. Dispatch maintenance team.'
-      : severity === 'Warning'
-      ? 'Monitor closely. Flag for next inspection.'
-      : 'All parameters nominal.',
-  }
-}
+import { useContext } from 'react'
+import { VigilStreamContext } from '../VigilStreamProvider'
 
 const color = (s) => s === 'Critical' ? '#ef4444' : s === 'Warning' ? '#f59e0b' : '#00ff88'
 
 export default function AlertFeed({ onAlertClick }) {
-  const [alerts, setAlerts] = useState(Array.from({length: 8}, () => randomAlert()))
+  let alerts = []
+  let connected = false
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAlerts(prev => [randomAlert(), ...prev].slice(0, 20))
-    }, 2500)
-    return () => clearInterval(interval)
-  }, [])
+  try {
+    const ctx = useContext(VigilStreamContext)
+    alerts = ctx?.alerts || []
+    connected = ctx?.connected || false
+  } catch(e) {
+    alerts = []
+    connected = false
+  }
 
   return (
     <div style={{
@@ -39,36 +23,51 @@ export default function AlertFeed({ onAlertClick }) {
       padding: '14px 12px', backgroundColor: '#111827', overflow: 'hidden'
     }}>
       <div style={{
-        fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em',
-        color: '#9ca3af', marginBottom: '10px', flexShrink: 0
-      }}>LIVE ALERT FEED</div>
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: '10px', flexShrink: 0
+      }}>
+        <div style={{fontSize: '10px', fontWeight: '600', letterSpacing: '0.1em', color: '#9ca3af'}}>
+          LIVE ALERT FEED
+        </div>
+        <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            backgroundColor: connected ? '#00ff88' : '#ef4444',
+            boxShadow: connected ? '0 0 5px #00ff88' : '0 0 5px #ef4444'
+          }}/>
+          <span style={{fontSize: '9px', fontWeight: '600', letterSpacing: '0.06em',
+            color: connected ? '#00ff88' : '#ef4444'
+          }}>{connected ? 'LIVE' : 'OFFLINE'}</span>
+        </div>
+      </div>
 
       <div style={{display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', flex: 1}}>
-        {alerts.map(alert => (
+        {alerts.map((alert, i) => (
           <div
-            key={alert.id}
-            onClick={() => alert.severity === 'Critical' && onAlertClick(alert)}
+            key={alert.id || i}
+            onClick={() => alert.severity === 'Critical' && onAlertClick && onAlertClick(alert)}
             style={{
               display: 'flex', flexDirection: 'column', gap: '2px',
-              padding: '7px 10px',
-              borderRadius: '6px',
+              padding: '7px 10px', borderRadius: '6px',
               backgroundColor: '#0d1321',
               border: '1px solid ' + color(alert.severity) + '20',
               borderLeft: '2px solid ' + color(alert.severity),
               cursor: alert.severity === 'Critical' ? 'pointer' : 'default',
+              flexShrink: 0
             }}
           >
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-              <span style={{
-                fontSize: '10px', fontWeight: '600',
+              <span style={{fontSize: '10px', fontWeight: '700',
                 color: color(alert.severity), letterSpacing: '0.04em'
               }}>
-                {alert.severity.toUpperCase()}
+                {(alert.severity || 'NORMAL').toUpperCase()}
               </span>
-              <span style={{fontSize: '10px', color: '#6b7280'}}>{alert.time}</span>
+              <span style={{fontSize: '10px', color: '#6b7280'}}>
+                {alert.time || new Date().toLocaleTimeString()}
+              </span>
             </div>
             <div style={{fontSize: '11px', color: '#c9d1d9', fontWeight: '400'}}>
-              {alert.trainId} — {alert.section}
+              {alert.train_id || alert.trainId} — {alert.track_section || alert.section}
             </div>
             {alert.severity === 'Critical' && (
               <div style={{fontSize: '10px', color: '#6b7280'}}>Click to view details →</div>
