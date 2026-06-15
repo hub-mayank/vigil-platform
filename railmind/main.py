@@ -3,10 +3,12 @@ import json
 import logging
 import os
 import random
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
@@ -47,15 +49,42 @@ app = FastAPI(
 )
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
-# Wildcard origin + credentials=False is the correct public-API pattern.
-# credentials=True with wildcard is rejected by browsers and enables CSRF abuse.
+# Lock to the Vercel production origin + localhost for dev.
+# ALLOWED_ORIGINS env var lets you add custom domains without code changes.
+_extra = os.environ.get("ALLOWED_ORIGINS", "")  # comma-separated
+_allowed_origins = [
+    "https://vigil-platform-six.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    *[o.strip() for o in _extra.split(",") if o.strip()],
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+
+# ── Rate limiter ──────────────────────────────────────────────────────────────
+# Simple in-memory sliding-window limiter for /agent/analyze.
+# Each IP gets 10 calls per 60-second window.
+# (No Redis needed for single-instance Railway deploy.)
+_RATE_LIMIT   = 10   # max calls
+_RATE_WINDOW  = 60   # seconds
+_rate_store: dict[str, list[float]] = defaultdict(list)
+
+def _check_rate_limit(ip: str) -> None:
+    now   = time.monotonic()
+    calls = _rate_store[ip]
+    # Remove calls older than the window
+    _rate_store[ip] = [t for t in calls if now - t < _RATE_WINDOW]
+    if len(_rate_store[ip]) >= _RATE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded: max {_RATE_LIMIT} AI analysis calls per {_RATE_WINDOW}s per IP."
+        )
+    _rate_store[ip].append(now)
 
 # ── Groq client ───────────────────────────────────────────────────────────────
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -104,7 +133,8 @@ def analyze_reading(reading: SensorReading):
 
 
 @app.post("/agent/analyze")
-def agent_analyze(reading: SensorReading):
+def agent_analyze(reading: SensorReading, request: Request):
+    _check_rate_limit(request.client.host if request.client else "unknown")
     """
     Groq-powered analysis endpoint.
     Runs IsolationForest first, then — on anomaly — calls Groq
