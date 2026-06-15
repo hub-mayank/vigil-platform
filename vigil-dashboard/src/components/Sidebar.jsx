@@ -58,13 +58,18 @@ export default function Sidebar() {
       </div>
 
       {/* OrbitMind */}
-      <div style={{
-        display: 'flex', flexDirection: 'column', gap: '6px',
-        padding: '12px 14px', borderRadius: '8px',
-        backgroundColor: '#0e1117',
-        border: '1px solid #2d3748',
-        marginBottom: '10px'
-      }}>
+      <div
+        onMouseEnter={e => e.currentTarget.style.opacity = '0.45'}
+        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        style={{
+          display: 'flex', flexDirection: 'column', gap: '6px',
+          padding: '12px 14px', borderRadius: '8px',
+          backgroundColor: '#0e1117',
+          border: '1px solid #2d3748',
+          marginBottom: '10px',
+          cursor: 'default',
+          transition: 'opacity 0.2s ease'
+        }}>
         <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
           <div style={{
             width: '7px', height: '7px', borderRadius: '50%',
@@ -80,7 +85,7 @@ export default function Sidebar() {
           borderRadius: '99px', backgroundColor: '#1f2937',
           color: '#6b7280', width: 'fit-content',
           marginLeft: '15px', letterSpacing: '0.08em'
-        }}>ROUND 2</div>
+        }}>UPCOMING</div>
       </div>
 
       {/* Footer */}

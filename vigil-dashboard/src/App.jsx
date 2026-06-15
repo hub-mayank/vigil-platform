@@ -7,6 +7,7 @@ import AgentLog from "./components/AgentLog"
 import AlertModal from "./components/AlertModal"
 import TrainTracker from "./components/TrainTracker"
 import RailNetworkMap from "./components/RailNetworkMap"
+import MobileBlocker from "./components/MobileBlocker"
 
 function StatusBadge() {
   const ctx = useContext(VigilStreamContext)
@@ -32,6 +33,7 @@ export default function App() {
   const [activeAlert, setActiveAlert] = useState(null)
   const [resolvedIds, setResolvedIds] = useState(new Set())
   const [time, setTime] = useState(new Date())
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
 
   // mapOpen state removed — RailNetworkMap owns its own expand/collapse internally
 
@@ -44,6 +46,10 @@ export default function App() {
     setResolvedIds(prev => new Set(prev).add(id))
     setActiveAlert(null)
   }
+
+  // Block mobile devices — VIGIL is a desktop command console
+  if (isMobile) return <MobileBlocker />
+
 
   return (
     <VigilStreamProvider>
