@@ -86,6 +86,13 @@ def _check_rate_limit(ip: str) -> None:
         )
     _rate_store[ip].append(now)
 
+    # Periodic cleanup: evict IPs with no recent calls to prevent memory growth.
+    # Only run 1-in-100 calls to avoid the cost every invocation.
+    if random.randint(0, 99) == 0:
+        stale = [k for k, v in list(_rate_store.items()) if not v]
+        for k in stale:
+            del _rate_store[k]
+
 # ── Groq client ───────────────────────────────────────────────────────────────
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -93,8 +100,8 @@ groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 # Bounds validation on all sensor fields prevents extreme/garbage values from
 # skewing the IsolationForest score or crashing downstream processing.
 class SensorReading(BaseModel):
-    train_id:            str   = Field(..., example="TRAIN_001")
-    track_section:       str   = Field(..., example="SECTION_A")
+    train_id:            str   = Field(..., min_length=1, max_length=50,  example="TRAIN_001")
+    track_section:       str   = Field(..., min_length=1, max_length=20,  example="SECTION_A")
     signal_voltage:      float = Field(..., ge=0.0,   le=500.0,  example=230.5)
     vibration_hz:        float = Field(..., ge=0.0,   le=500.0,  example=48.2)
     speed_kmh:           float = Field(..., ge=0.0,   le=500.0,  example=85.0)
@@ -103,16 +110,19 @@ class SensorReading(BaseModel):
     @field_validator("train_id")
     @classmethod
     def validate_train_id(cls, v: str) -> str:
-        if not v.strip():
+        v = v.strip()
+        if not v:
             raise ValueError("train_id cannot be empty")
-        return v.strip()
+        # Strip characters that could break log formatting or inject into prompts
+        return ''.join(c for c in v if c.isalnum() or c in '-_')
 
     @field_validator("track_section")
     @classmethod
     def validate_track_section(cls, v: str) -> str:
-        if not v.strip():
+        v = v.strip()
+        if not v:
             raise ValueError("track_section cannot be empty")
-        return v.strip()
+        return ''.join(c for c in v if c.isalnum() or c in '-_')
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { VigilStreamProvider } from './VigilStreamProvider'
+import { useState, useEffect, useContext } from "react"
+import { VigilStreamProvider, VigilStreamContext } from './VigilStreamProvider'
 import Sidebar from "./components/Sidebar"
 import AlertFeed from "./components/AlertFeed"
 import HealthChart from "./components/HealthChart"
@@ -7,6 +7,26 @@ import AgentLog from "./components/AgentLog"
 import AlertModal from "./components/AlertModal"
 import TrainTracker from "./components/TrainTracker"
 import RailNetworkMap from "./components/RailNetworkMap"
+
+function StatusBadge() {
+  const ctx = useContext(VigilStreamContext)
+  const connected    = ctx?.connected    || false
+  const reconnecting = ctx?.reconnecting || false
+  const color  = connected ? '#00ff88' : reconnecting ? '#f59e0b' : '#ef4444'
+  const label  = connected ? 'ALL SYSTEMS ACTIVE' : reconnecting ? 'RECONNECTING' : 'STREAM OFFLINE'
+  const cls    = connected ? 'status-dot' : reconnecting ? 'live-badge' : ''
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className={cls} style={{
+        width: '7px', height: '7px', borderRadius: '50%',
+        backgroundColor: color, boxShadow: `0 0 7px ${color}`
+      }} />
+      <span style={{ fontSize: '11px', fontWeight: '600', color, letterSpacing: '0.08em' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
 
 export default function App() {
   const [activeAlert, setActiveAlert] = useState(null)
@@ -60,16 +80,7 @@ export default function App() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '22px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div className="status-dot" style={{
-                    width: '7px', height: '7px', borderRadius: '50%',
-                    backgroundColor: '#00ff88', boxShadow: '0 0 7px #00ff88'
-                  }} />
-                  <span style={{
-                    fontSize: '11px', fontWeight: '600',
-                    color: '#00ff88', letterSpacing: '0.08em'
-                  }}>ALL SYSTEMS ACTIVE</span>
-                </div>
+                  <StatusBadge />
                 <div style={{
                   fontSize: '12px', color: '#8896a8',
                   fontVariantNumeric: 'tabular-nums', letterSpacing: '0.04em'
