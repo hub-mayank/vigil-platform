@@ -35,7 +35,14 @@ export default function App() {
   const [time, setTime] = useState(new Date())
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
 
-  // mapOpen state removed — RailNetworkMap owns its own expand/collapse internally
+  // Keep isMobile in sync when the window is resized (or DevTools device
+  // toolbar is toggled after page load — without this the blocker never fires
+  // during a simulated resize because useState only runs once at mount).
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 1024)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)

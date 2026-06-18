@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useVigilStream } from '../VigilStreamProvider';
 
-const idleMessages = [
+// Static idle messages that contain no train/section references
+// (those are now dynamically generated from live section data below)
+const genericIdleMessages = [
   { agent: 'WatchAgent', msg: 'Monitoring 50 active train sensors across 10 sections' },
   { agent: 'WatchAgent', msg: 'Signal voltage nominal across all active sections' },
   { agent: 'WatchAgent', msg: 'Vibration levels within threshold on all active trains' },
@@ -18,39 +20,66 @@ const agentColors = {
 };
 
 export default function AgentLog() {
-  const { latest, connected } = useVigilStream();
+  const { latest, sections, connected } = useVigilStream();
   const [log, setLog] = useState([]);
 
   // Idle rotation so the log keeps breathing between live events.
+  // When section data is available, inject dynamic station-name references;
+  // otherwise fall back to generic static messages.
   // Only run when actually connected — don't show fake messages during outages.
   useEffect(() => {
     if (!connected) return;
     const interval = setInterval(() => {
-      const msg = idleMessages[Math.floor(Math.random() * idleMessages.length)];
+      const sectionKeys = Object.keys(sections || {});
+      let msg;
+
+      if (sectionKeys.length > 0) {
+        // Pick a random live section and reference its real station name
+        const key = sectionKeys[Math.floor(Math.random() * sectionKeys.length)];
+        const sec = sections[key];
+        const stationName = sec.real_station_name || key;
+        const realTrain = sec.real_train_number || sec.train_id || '';
+
+        const dynamicMessages = [
+          { agent: 'WatchAgent', msg: `Monitoring ${stationName} sector — all readings nominal` },
+          { agent: 'WatchAgent', msg: `${stationName}: signal voltage stable, no anomalies detected` },
+          { agent: 'WatchAgent', msg: `${realTrain} passing through ${stationName} — surveillance active` },
+          { agent: 'WatchAgent', msg: `${stationName} junction: track integrity verified` },
+        ];
+        msg = dynamicMessages[Math.floor(Math.random() * dynamicMessages.length)];
+      } else {
+        msg = genericIdleMessages[Math.floor(Math.random() * genericIdleMessages.length)];
+      }
+
       setLog(prev => [{ ...msg, id: `idle-${Date.now()}` }, ...prev].slice(0, 40));
     }, 3000);
     return () => clearInterval(interval);
-  }, [connected]);
+  }, [connected, sections]);
 
   // Real entries driven by the live /stream — this is what makes the
-  // log feel like an actual reasoning trace instead of a script
+  // log feel like an actual reasoning trace instead of a script.
+  // Uses real_train_number and real_station_name when available.
   useEffect(() => {
     if (!latest) return;
+
+    const trainLabel   = latest.real_train_number || latest.train_id;
+    const stationLabel = latest.real_station_name || latest.track_section;
+
     const entries = [];
 
     if (latest.is_anomaly) {
       entries.push({
         agent: 'AlertAgent',
-        msg: `Anomaly detected — ${latest.train_id} on ${latest.track_section}, severity ${latest.severity}`,
+        msg: `Anomaly detected — ${trainLabel} on ${stationLabel}, severity ${latest.severity}`,
       });
       entries.push({
         agent: 'ActionAgent',
-        msg: latest.recommended_action || `Recommendation logged for ${latest.train_id}`,
+        msg: latest.recommended_action || `Recommendation logged for ${trainLabel}`,
       });
     } else {
       entries.push({
         agent: 'WatchAgent',
-        msg: `${latest.train_id} on ${latest.track_section} — reading nominal, continuing surveillance`,
+        msg: `${trainLabel} on ${stationLabel} — reading nominal, continuing surveillance`,
       });
     }
 

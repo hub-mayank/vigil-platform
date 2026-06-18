@@ -74,7 +74,7 @@ function makeIcon(L, color, pulse = false) {
   })
 }
 
-function makeTooltip(section, city, severity, trainId, color) {
+function makeTooltip(city, severity, trainId, color) {
   return `
     <div style="
       background:#0d1321;border:1px solid #1f2937;
@@ -83,8 +83,7 @@ function makeTooltip(section, city, severity, trainId, color) {
       color:#fff;font-size:11px;
       font-family:Inter,sans-serif;min-width:130px;
     ">
-      <div style="font-weight:700;color:${escHtml(color)};margin-bottom:2px;">${escHtml(section)}</div>
-      <div style="color:#c9d1d9;font-size:12px;font-weight:600;">${escHtml(city)}</div>
+      <div style="color:#c9d1d9;font-size:12px;font-weight:700;margin-bottom:2px;">${escHtml(city)}</div>
       <div style="color:#6b7280;font-size:10px;margin-top:2px;">${escHtml(trainId || '—')}</div>
       <div style="color:${escHtml(color)};font-weight:600;font-size:10px;margin-top:3px;">
         ${escHtml(severity.toUpperCase())}
@@ -137,7 +136,7 @@ function useLeafletMap(containerRef, sections, interactive) {
         })
           .addTo(map)
           .bindTooltip(
-            makeTooltip(section, city.name, 'Normal', '—', color),
+            makeTooltip(city.name, 'Normal', '—', color),
             { permanent: false, direction: 'top', offset: [0, -10],
               className: 'vigil-tooltip', opacity: 1 }
           )
@@ -166,13 +165,13 @@ function useLeafletMap(containerRef, sections, interactive) {
     Object.entries(SECTION_CITIES).forEach(([section, city]) => {
       const d = sections?.[section]
       const severity = d?.severity || 'Normal'
-      const trainId = d?.train_id || '—'
+      const trainId = d?.real_train_number || d?.train_id || '—'
       const color = getSeverityColor(severity)
       const marker = markersRef.current[section]
       if (!marker) return
 
       marker.setIcon(makeIcon(L, color, severity === 'Critical'))
-      marker.setTooltipContent(makeTooltip(section, city.name, severity, trainId, color))
+      marker.setTooltipContent(makeTooltip(city.name, severity, trainId, color))
     })
   }, [sections])
 }
@@ -396,7 +395,9 @@ export default function RailNetworkMap() {
           background: #1f2937 !important;
           color: #fff !important;
         }
-        .leaflet-tile { filter: brightness(0.8) saturate(0.6); }
+        .leaflet-tile {
+          filter: brightness(0.75) saturate(1.2) hue-rotate(190deg) contrast(0.9);
+        }
       `}</style>
 
       {/* Inline panel */}

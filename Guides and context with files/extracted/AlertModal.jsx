@@ -1,67 +1,57 @@
 import { useEffect, useState } from 'react';
 
-const AGENT_ANALYZE_URL = `${import.meta.env.VITE_AGENT_API_URL || 'http://localhost:8000'}/agent/analyze`;
+const AGENT_ANALYZE_URL = 'http://localhost:8000/agent/analyze';
 const AGENT_ANALYZE_TIMEOUT_MS = 4000; // if Groq is slow, fall back rather than hang the modal
 
 export default function AlertModal({ alert, onClose, onResolve }) {
   const [agentData, setAgentData] = useState(null);
-  const [llmResponse, setLlmResponse] = useState(null);
-  const [llmLoading, setLlmLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // Fetch live Groq reasoning for this specific reading when the modal opens.
   // IMPORTANT: hooks must run unconditionally (before the `if (!alert)` guard
   // below), otherwise React throws "hooks called conditionally".
   useEffect(() => {
     setAgentData(null);
-    setLlmResponse(null);
-    setLlmLoading(true);
 
-    if (!alert) return;
+    if (!alert || !alert.raw) return; // nothing to fetch without the raw sensor reading
 
-    let cancelled = false;
+    setLoading(true);
 
-    const timer = setTimeout(() => {
-      if (!cancelled) {
-        setLlmLoading(false);
-      }
-    }, 4000);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AGENT_ANALYZE_TIMEOUT_MS);
 
     fetch(AGENT_ANALYZE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
       body: JSON.stringify({
-        train_id: alert.raw?.train_id || alert.train_id || alert.trainId || '',
-        track_section: alert.raw?.track_section || alert.track_section || alert.section || '',
-        signal_voltage: alert.raw?.signal_voltage ?? alert.signal_voltage ?? 220.0,
-        vibration_hz: alert.raw?.vibration_hz ?? alert.vibration_hz ?? 50.0,
-        speed_kmh: alert.raw?.speed_kmh ?? alert.speed_kmh ?? 80.0,
-        temperature_celsius: alert.raw?.temperature_celsius ?? alert.temperature_celsius ?? 30.0,
+        train_id: alert.raw.train_id,
+        track_section: alert.raw.track_section,
+        signal_voltage: alert.raw.signal_voltage,
+        vibration_hz: alert.raw.vibration_hz,
+        speed_kmh: alert.raw.speed_kmh,
+        temperature_celsius: alert.raw.temperature_celsius,
       }),
     })
       .then(res => {
-        if (!res.ok) throw new Error('failed');
+        if (!res.ok) throw new Error('agent/analyze failed');
         return res.json();
       })
-      .then(json => {
-        if (!cancelled) {
-          clearTimeout(timer);
-          setAgentData(json);
-          setLlmResponse(json.recommended_action || null);
-          setLlmLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          clearTimeout(timer);
-          setLlmLoading(false);
-        }
+      .then(json => setAgentData(json))
+      .catch(() => setAgentData(null)) // silent fallback — alert.recommended_action covers this
+      .finally(() => {
+        clearTimeout(timeout);
+        setLoading(false);
       });
 
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
+      clearTimeout(timeout);
+      controller.abort();
     };
-  }, [alert?.train_id]);
+    // alert.id is enough to re-trigger; using the whole `alert` object would
+    // re-fire on every parent re-render even for the same alert.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alert?.id]);
 
   // --- NULL GUARD ---
   // Without this, the modal crashes the whole app with
@@ -76,22 +66,14 @@ export default function AlertModal({ alert, onClose, onResolve }) {
   const time = alert.time || alert.timestamp;
   const severity = (alert.severity || 'CRITICAL').toUpperCase();
 
-  // ── Three-state action logic ──────────────────────────────────────────────
-  // State 1 — Pending  : loading=true,  agentData=null  → show placeholder only
-  // State 2 — Live AI  : loading=false, agentData set, trace has 'groq' string
-  // State 3 — Fallback : loading=false, agentData=null  → show ML template + label
-  //
-  // IMPORTANT: alert.recommended_action (ML template from model.py) is preserved
-  // word-for-word in state 3 — only DISPLAY TIMING changes, not content.
-  const trace     = agentData?.agent_trace;
-  const isLiveAI  = !!trace?.some(t => t.toLowerCase().includes('groq'));
-  const isPending  = llmLoading;
-  const isResolved = !llmLoading;
-  const isFallback = isResolved && !llmResponse;
-  const mlFallbackText =
+  const action =
+    agentData?.recommended_action ||
     alert.recommended_action ||
     alert.action ||
     'Reduce speed immediately. Dispatch maintenance team.';
+
+  const trace = agentData?.agent_trace;
+  const isLiveAI = !!trace?.some(t => t.toLowerCase().includes('groq'));
 
   const handleResolve = () => {
     if (onResolve) onResolve(alert.id);
@@ -99,18 +81,11 @@ export default function AlertModal({ alert, onClose, onResolve }) {
   };
 
   return (
-    <>
-      <style>{`
-        @keyframes staggered-pulse {
-          0%, 100% { opacity: 0.2; }
-          50% { opacity: 1; }
-        }
-      `}</style>
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 9000,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.45)'
-      }}>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.45)'
+    }}>
       <div style={{
         width: '400px',
         backgroundColor: '#0d1321',
@@ -158,6 +133,11 @@ export default function AlertModal({ alert, onClose, onResolve }) {
             {realTrainNumber} — {realStationName}
           </div>
           <div style={{
+            fontSize: '10px', color: '#4b5563', marginBottom: '6px'
+          }}>
+            Internal ref: {trainId} · {section}
+          </div>
+          <div style={{
             fontSize: '11px', color: '#6b7280', marginBottom: '14px'
           }}>
             Detected {time}
@@ -182,83 +162,38 @@ export default function AlertModal({ alert, onClose, onResolve }) {
             ))}
           </div>
 
-          {/* AI Recommendation — three-state render */}
+          {/* AI Recommendation */}
           <div style={{
             padding: '12px 14px', borderRadius: '8px',
-            backgroundColor: isFallback ? '#0d1a0d' : '#071f12',
-            border: `1px solid ${isFallback ? '#374151' : '#00ff8825'}`,
+            backgroundColor: '#071f12',
+            border: '1px solid #00ff8825',
             marginBottom: trace ? '10px' : '16px'
           }}>
-            {/* Label row */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '6px'
             }}>
               <div style={{
                 fontSize: '9px', fontWeight: '700',
-                color: isFallback ? '#6b7280' : '#00ff88',
-                letterSpacing: '0.1em'
-              }}>
-                {isFallback ? 'ML PREDICTION' : 'ACTIONAGENT RECOMMENDATION'}
-              </div>
+                color: '#00ff88', letterSpacing: '0.1em'
+              }}>ACTIONAGENT RECOMMENDATION</div>
 
-              {/* State 1 — Pending: pulsing dot + THINKING label */}
-              {isPending && (
+              {loading && (
                 <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
-                  <div style={{
+                  <div className="animate-pulse" style={{
                     width: '6px', height: '6px', borderRadius: '50%',
-                    backgroundColor: '#00ff88',
-                    animation: 'pulse 1.5s ease-in-out infinite'
+                    backgroundColor: '#00ff88'
                   }}/>
                   <span style={{fontSize: '9px', color: '#00ff88'}}>THINKING…</span>
                 </div>
               )}
-
-              {/* State 2 — Live AI badge */}
-              {isResolved && isLiveAI && (
+              {!loading && isLiveAI && (
                 <span style={{fontSize: '9px', color: '#00ff88', fontWeight: '700'}}>● LIVE AI</span>
               )}
-
-              {/* State 3 — Fallback label */}
-              {isFallback && (
-                <span style={{fontSize: '9px', color: '#6b7280', fontStyle: 'italic'}}>offline mode</span>
-              )}
             </div>
-
-            {llmLoading ? (
-              <div style={{
-                display: 'flex', gap: '6px',
-                alignItems: 'center', padding: '8px 0'
-              }}>
-                <style>{`
-                  @keyframes vigil-dot {
-                    0%, 100% { opacity: 0.2; transform: scale(0.8); }
-                    50% { opacity: 1; transform: scale(1.2); }
-                  }
-                `}</style>
-                {[0, 0.3, 0.6].map((delay, i) => (
-                  <div key={i} style={{
-                    width: '7px', height: '7px',
-                    borderRadius: '50%',
-                    backgroundColor: '#00ff88',
-                    animation: `vigil-dot 1.2s ease-in-out infinite`,
-                    animationDelay: `${delay}s`
-                  }} />
-                ))}
-              </div>
-            ) : llmResponse ? (
-              <div style={{
-                fontSize: '12px', color: '#d1d5db', lineHeight: '1.5'
-              }}>
-                {llmResponse}
-              </div>
-            ) : (
-              <div style={{
-                fontSize: '12px', color: '#9ca3af', lineHeight: '1.5'
-              }}>
-                {mlFallbackText}
-              </div>
-            )}
+            <div style={{fontSize: '12px', color: '#d1d5db', lineHeight: '1.5'}}>
+              {action}
+            </div>
           </div>
 
           {/* Agent trace — only shown once /agent/analyze responds */}
@@ -295,6 +230,5 @@ export default function AlertModal({ alert, onClose, onResolve }) {
         </div>
       </div>
     </div>
-    </>
   )
 }
